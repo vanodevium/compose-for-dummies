@@ -1,0 +1,127 @@
+services:
+
+  # variant with Caddy server
+  awesome-web:
+    image: "caddy:2-alpine"
+    container_name: "awesome-web"
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - "./.docker/Caddyfile:/etc/caddy/Caddyfile"
+      - "./:/app"
+    networks:
+      - awesome
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=awesome"
+      - "traefik.http.routers.awesome.rule=Host(`${HOST}`)"
+      - "traefik.http.services.awesome.loadbalancer.server.port=80"
+
+  # variant with Nginx server
+  awesome-web:
+    image: "nginx:1-alpine"
+    container_name: "awesome-web"
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./.docker/nginx.conf:/etc/nginx/nginx.conf
+      - ./:/app:ro
+    networks:
+      - awesome
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=awesome"
+      - "traefik.http.routers.awesome.rule=Host(`${HOST}`)"
+      - "traefik.http.services.awesome.loadbalancer.server.port=80"
+
+  awesome-php:
+    build:
+      dockerfile: .docker/Dockerfile
+    container_name: "awesome-php"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - "DB_HOST=awesome-db"
+      - "REDIS_HOST=awesome-cache"
+    user: "1000:1000"
+    volumes:
+      - "./:/app"
+      # next mount is an example of FPM customization
+      #- "./.docker/custom.conf:/usr/local/etc/php-fpm.d/www.conf"
+      # next mount is an example of PHP customization
+      #- "./.docker/custom.ini:/usr/local/etc/php/conf.d/custom.ini"
+    networks:
+      - awesome
+    #labels:
+    #  - "ofelia.enabled=true"
+    #  - "ofelia.job-exec.about.schedule=0 * * * * *"
+    #  - "ofelia.job-exec.about.command=bash -c 'php artisan about'"
+
+  awesome-db:
+    image: "mariadb:latest"
+    container_name: "awesome-db"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - "MYSQL_DATABASE=${DB_DATABASE}"
+      - "MYSQL_USER=${DB_USERNAME}"
+      - "MYSQL_PASSWORD=${DB_PASSWORD}"
+      - "MYSQL_ROOT_PASSWORD=${DB_PASSWORD}"
+    volumes:
+      - "./.data:/var/lib/mysql"
+    networks:
+      - awesome
+    #ports:
+    #  - "3306:3306"
+
+  awesome-cache:
+    image: "valkey/valkey:8-alpine"
+    container_name: "awesome-cache"
+    restart: unless-stopped
+    env_file: .env
+    command: "valkey-server --appendonly yes --loglevel warning"
+    #command: "valkey-server --appendonly yes --loglevel warning --requirepass ${REDIS_PASSWORD}"
+    volumes:
+      - "./.redis:/data"
+    networks:
+      - awesome
+    #ports:
+    #  - "6379:6379"
+
+  awesome-cron:
+    image: "mcuadros/ofelia:0.3"
+    container_name: "awesome-cron"
+    restart: unless-stopped
+    env_file: .env
+    command: "daemon --docker -f network=awesome"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - awesome
+
+  traefik:
+    image: "traefik:3.2"
+    container_name: "traefik"
+    restart: unless-stopped
+    command:
+      #- "--log.level=DEBUG"
+      #- "--accesslog"
+      #- "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.forwardedHeaders.insecure"
+      - "--entryPoints.https.address=:443"
+      - "--entryPoints.https.forwardedHeaders.insecure"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - awesome
+    ports:
+      - "80:80"
+      - "443:443"
+      #- "8080:8080" # for traefik insecure panel
+
+networks:
+  awesome:
+    name: "awesome"

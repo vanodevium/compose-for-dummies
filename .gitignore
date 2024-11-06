@@ -1,0 +1,6 @@
+.idea
+.data
+.redis
+vendor
+composer.lock
+.env
