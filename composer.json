@@ -1,0 +1,16 @@
+{
+    "name": "awesome/awesome",
+    "description": "Awesome",
+    "license": "RUSTRICTED",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Vano Devium",
+            "email": "vano@devium.me"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "symfony/var-dumper": "^7.1"
+    }
+}

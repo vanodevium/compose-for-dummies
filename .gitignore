@@ -1,0 +1,7 @@
+.idea
+.certificates
+.mysql
+.redis
+vendor
+composer.lock
+.env

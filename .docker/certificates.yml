@@ -1,0 +1,4 @@
+tls:
+  certificates:
+    - certFile: /certificates/awesome.pem
+      keyFile: /certificates/awesome-key.pem
